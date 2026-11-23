@@ -61,10 +61,14 @@ cd mathplot_template # or whatever you named your fork/copy
 git submodule init
 git submodule update
 
-# Build prog1 in a 'build' directory
+# Build in a 'build' directory
 mkdir build
 cd build
 CC=clang-20 CXX=clang++-20 cmake .. -GNinja
 ninja
 ./prog1 # You should see a window containing some graphs
 ```
+
+## Acknowledgements
+
+[rapidxml](http://rapidxml.sourceforge.net/)

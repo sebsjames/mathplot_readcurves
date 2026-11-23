@@ -1,5 +1,5 @@
 #
-# This is an example CMakeLists.txt file to compile a program against mathplot
+# Code to read curves from an SVG file.
 #
 # Mathplot provides all its functionality as modules. What you do is
 # compile these modules - the mathplot core - into a library. You then
@@ -9,7 +9,7 @@
 cmake_minimum_required(VERSION 3.28.5 FATAL_ERROR)
 
 # Give your project a name. Specify language CXX (for maths, mathplot and your code) and also C (for glad)
-project(mathplot_template LANGUAGES CXX C)
+project(mathplot_readcurves LANGUAGES CXX C)
 
 # mathplot uses c++-20 language features
 set(CMAKE_CXX_STANDARD 20)
@@ -48,9 +48,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGL3_PROTOTYPES -DGL_GLEXT_PROTOTYPES")
 # Include paths for module compilation
 #
 
-# mathplot needs these includes
-include_directories(${OPENGL_INCLUDE_DIR} ${FREETYPE_INCLUDE_DIRS} ${MPLOT_SOURCE_DIR})
-
 #
 # Define lists of module files to build. We pull in some definitions
 # of variables that list the modules in maths and mathplot
@@ -62,7 +59,9 @@ setup_module_variables_for_maths (${MATHS_SOURCE_DIR})
 # Include mathplot module defs by running two macros from sebsjames/mathplot
 include(${MPLOT_SOURCE_DIR}/cmake/module_definitions.cmake)
 setup_module_variables_for_mathplot (${MPLOT_SOURCE_DIR} ${MATHS_SOURCE_DIR})
-
+# mathplot_readcurves
+include(${PROJECT_SOURCE_DIR}/cmake/module_definitions.cmake)
+setup_module_variables_for_mathplot_readcurves (${PROJECT_SOURCE_DIR} ${MATHS_SOURCE_DIR})
 
 #
 # Compile two 'boilerplate' libraries - glad and the mathplot fontdata
@@ -70,42 +69,35 @@ setup_module_variables_for_mathplot (${MPLOT_SOURCE_DIR} ${MATHS_SOURCE_DIR})
 
 # For mathplot, we must build the glad library here
 add_library(glad STATIC ${MPLOT_SOURCE_DIR}/mplot/glad/gl.c)
+target_include_directories(glad AFTER PRIVATE ${MPLOT_SOURCE_DIR})
 
 # We have to build the mathplot fonts data library - this packs up
 # some TTF fonts into an object file; they're unpacked at runtime.
 add_library(mplot_fontdata STATIC ${MPLOT_SOURCE_DIR}/mplot/VisualFaceAsm.cpp)
+target_include_directories(mplot_fontdata AFTER PRIVATE ${MPLOT_SOURCE_DIR})
 
 #
 # Compile a library with the mathplot features we want
 #
 
 # Define a list of the modules we wish to compile into our library
-set(MY_MATHPLOT_MODULES
+set(MY_MODULES
   ${MPLOT_CORE_MODULES}
-  ${MPLOT_SOURCE_DIR}/mplot/GraphVisual.cppm  # The example uses a GraphVisual
+  ${MPLOT_READCURVES_MODULES}
+  ${MPLOT_SOURCE_DIR}/mplot/HexGridVisual.cppm
 )
 # De-duplicate the list
-list(REMOVE_DUPLICATES MY_MATHPLOT_MODULES)
+list(REMOVE_DUPLICATES MY_MODULES)
 # Add a library called mathplot_modules
 add_library(mathplot_modules SHARED)
 # Attach the list of modules to the library
 target_sources(mathplot_modules
   PUBLIC FILE_SET CXX_MODULES BASE_DIRS ${PROJECT_SOURCE_DIR}
-  FILES ${MY_MATHPLOT_MODULES}
+  FILES ${MY_MODULES}
 )
 # Link the OpenGL, Freetype and GLFW libraries to this internal library
 target_link_libraries(mathplot_modules OpenGL::GL Freetype::Freetype glfw glad mplot_fontdata)
+target_include_directories(mathplot_modules AFTER PRIVATE ${OPENGL_INCLUDE_DIR} ${FREETYPE_INCLUDE_DIRS} ${MPLOT_SOURCE_DIR})
 
-#
-# Now it's time to define how we will compile the program prog1
-#
-
-# The sample is compiled from a single c++ file
-add_executable(prog1 prog1.cpp)
-
-# Link our internal library mathplot_modules
-target_link_libraries(prog1 mathplot_modules)
-
-#
-# All done!
-#
+# Example programs are in a subdirectory
+add_subdirectory(examples)
